@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity DivisaoVelocidade is
+entity divisaoVelocidade is
 
 	port
 	(
@@ -13,7 +13,7 @@ entity DivisaoVelocidade is
 
 end entity;
 
-architecture rtl of DivisaoVelocidade is
+architecture rtl of divisaoVelocidade is
 signal resultado : std_logic_vector (15 downto 0);
 begin
 resultado <= std_logic_vector(unsigned(divisor)/ unsigned(dividendo));

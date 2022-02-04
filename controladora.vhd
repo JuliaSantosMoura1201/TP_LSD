@@ -8,7 +8,8 @@ port(
 	bit_a: in std_logic;
 	bit_b: in std_logic;
 	bit_v: in std_logic;
-	clock: in std_logic;
+	clk: in std_logic;
+	clr: in std_logic;
 	led_verde: out std_logic;
 	led_vermelho: out std_logic;
 	led_amarelo: out std_logic;
@@ -17,7 +18,7 @@ port(
 	
 	c_01: in std_logic;
 	c_03: in std_logic;
-	reset: in std_logic
+	reset: in std_logic;
 	sr_a: out std_logic;
 	sr_b: out std_logic;
 	sr_v: out std_logic;
@@ -25,14 +26,13 @@ port(
 	sr_m: out std_logic;
 	set_mux: out std_logic;
 	set_count: out std_logic;
-	clear: out std_logic;
-)
+	clear: out std_logic
+);
 end entity;
 
 architecture arch of controladora is
-	type estado is(
+	type state is(
 		inicio,
-		espera_tempo_a,
 		espera_tempo_b,
 		verifica_velocidade,
 		reporta_problema,
@@ -41,37 +41,32 @@ architecture arch of controladora is
 		calcula_multa,
 		multa_maxima,
 		notifica_multa,
-		exibe_velocidade
+		exibe_velocidade,
+		intermediario_inicio,
+		intermediario_espera_tempo_b,
+		intermediario_verifica_velocidade,
+		intermediario_notifica_multa,
+		intermediario_exibe_velocidade
 	);
 
 	-- estado_atual e proximo_estado recebe o tipo estado 
-	signal estado_atual, proximo_estado: estado
+	signal estado_atual, proximo_estado: state;
 
 	begin
 	-- máquina de estados finitos 
-	sequencial: process(clock, reset)
+	sequencial: process(clk, reset)
 		begin
-			if(reset = '1') then
+			if( clr = '1') then
+				estado_atual <= inicio;
+			elsif(reset = '1') then
 				estado_atual <= reporta_problema;
-			elsif(rising_edge(clock)then)
+			elsif(rising_edge(clk)) then
 				estado_atual <= proximo_estado;
 			end if;
 	end process;
 
 	combinacional: process(bit_a, bit_b, bit_v, c_01, c_03, estado_atual)
 	begin
-
-		led_verde <= '0';
-		led_vermelho <= '0';
-		led_amarelo <= '0';
-		sr_a <= '0';
-		sr_b <= '0';
-		sr_v <= '0';
-		sr_vc <= '0';
-		sr_m <= '0';
-		set_mux <= '0';
-		set_count <= '0';
-		
 		
 		case estado_atual is
 			when inicio =>
@@ -85,7 +80,7 @@ architecture arch of controladora is
 				sr_m <= '0';
 				set_mux <= '0';
 				set_count <= '0';
-				clear <= '0';
+				clear <= '1';
 				if(bit_a = '1') then
 					proximo_estado <= intermediario_inicio;
 				else
@@ -101,7 +96,7 @@ architecture arch of controladora is
 				sr_vc <= '0';
 				sr_m <= '0';
 				set_mux <= '0';
-				set_count <= '0';
+				set_count <= '1';
 				sr_a <= '1';
 				clear <= '0';
 				proximo_estado <= espera_tempo_b;
@@ -116,12 +111,12 @@ architecture arch of controladora is
 				sr_vc <= '0';
 				sr_m <= '0';
 				set_mux <= '0';
-				set_count <= '0';
 				clear <= '0';
 				if(bit_b = '1') then
 					proximo_estado <= intermediario_espera_tempo_b;
 				else
 					proximo_estado <= espera_tempo_b;
+				end if;
 					
 			when intermediario_espera_tempo_b =>
 				led_verde <= '0';
@@ -153,6 +148,7 @@ architecture arch of controladora is
 					proximo_estado <= intermediario_verifica_velocidade;
 				else 
 					proximo_estado <= verifica_velocidade;
+				end if;
 			
 			when intermediario_verifica_velocidade =>
 					led_verde <= '0';
@@ -161,7 +157,7 @@ architecture arch of controladora is
 					sr_a <= '0';
 					sr_b <= '0';
 					sr_v <= '1';
-					sr_vc <= '0';
+					sr_vc <= '1';
 					sr_m <= '0';
 					set_mux <= '0';
 					set_count <= '0';
@@ -177,6 +173,7 @@ architecture arch of controladora is
 					proximo_estado <= multa_maxima;
 				else
 					proximo_estado <= compara_velocidade;
+				end if;
 			
 			when sem_multa =>
 				led_verde <= '1';
@@ -184,7 +181,7 @@ architecture arch of controladora is
 				led_amarelo <= '0';
 				sr_a <= '0';
 				sr_b <= '0';
-				sr_v <= '1';
+				sr_v <= '0';
 				sr_vc <= '0';
 				sr_m <= '0';
 				set_mux <= '0';
@@ -193,12 +190,12 @@ architecture arch of controladora is
 				proximo_estado <= exibe_velocidade;
 				
 			when calcula_multa =>
-				led_verde <= '1';
+				led_verde <= '0';
 				led_vermelho <= '0';
 				led_amarelo <= '0';
 				sr_a <= '0';
 				sr_b <= '0';
-				sr_v <= '1';
+				sr_v <= '0';
 				sr_vc <= '0';
 				sr_m <= '0';
 				set_mux <= '1';
@@ -230,7 +227,6 @@ architecture arch of controladora is
 				sr_v <= '0';
 				sr_vc <= '0';
 				sr_m <= '0';
-				set_mux <= '0';
 				set_count <= '0';
 				clear <= '0';
 				proximo_estado <= intermediario_notifica_multa;
@@ -244,7 +240,6 @@ architecture arch of controladora is
 				sr_v <= '0';
 				sr_vc <= '0';
 				sr_m <= '1';
-				set_mux <= '0';
 				set_count <= '0';
 				clear <= '0';
 				proximo_estado <= exibe_velocidade;
@@ -256,9 +251,8 @@ architecture arch of controladora is
 				sr_a <= '0';
 				sr_b <= '0';
 				sr_v <= '0';
-				sr_vc <= '1';
+				sr_vc <= '0';
 				sr_m <= '0';
-				set_mux <= '0';
 				set_count <= '0';
 				clear <= '0';
 				proximo_estado <= intermediario_exibe_velocidade;
@@ -272,16 +266,15 @@ architecture arch of controladora is
 					sr_v <= '0';
 					sr_vc <= '1';
 					sr_m <= '0';
-					set_mux <= '0';
 					set_count <= '0';
 					sr_a <= '0';
 					clear <= '0';
 					proximo_estado <= inicio;
 				
 			when reporta_problema =>
-				led_verde <= '1';
+				led_verde <= '0';
 				led_vermelho <= '0';
-				led_amarelo <= '0';
+				led_amarelo <= '1';
 				sr_a <= '0';
 				sr_b <= '0';
 				sr_v <= '0';
@@ -294,18 +287,18 @@ architecture arch of controladora is
 				proximo_estado <= inicio;
 				
 			when others =>
-				ed_verde <= '1';
+				led_verde <= '0';
 				led_vermelho <= '0';
 				led_amarelo <= '0';
 				sr_a <= '0';
 				sr_b <= '0';
 				sr_v <= '0';
-				sr_vc <= '1';
+				sr_vc <= '0';
 				sr_m <= '0';
 				set_mux <= '0';
 				set_count <= '0';
 				sr_a <= '0';
-				clear <= '1';
+				clear <= '0';
 				proximo_estado <= inicio;
 		end case;
 	end process;
